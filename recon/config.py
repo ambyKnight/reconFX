@@ -35,6 +35,10 @@ CONF_COLLISION_DEMOTED = 0.50
 CONF_AMBIGUOUS = 0.35
 CONF_NO_CANDIDATE = 0.0
 
+# Suspense & materiality thresholds
+WRITE_OFF_THRESHOLD = 25.00  # Configurable threshold for write-off proposal (PIPELINE §5.2, ARCHITECTURE §4.5)
+CONF_AUTO_THRESHOLD = 0.95  # Calibrated threshold required for AUTO posting
+
 # Reference tokenization pattern
 TOKEN_REGEX = r"[A-Za-z0-9]{4,}"
 
@@ -59,6 +63,8 @@ def get_config_dict():
         "conf_collision_demoted": CONF_COLLISION_DEMOTED,
         "conf_ambiguous": CONF_AMBIGUOUS,
         "conf_no_candidate": CONF_NO_CANDIDATE,
+        "conf_auto_threshold": CONF_AUTO_THRESHOLD,
+        "write_off_threshold": WRITE_OFF_THRESHOLD,
         "token_regex": TOKEN_REGEX,
     }
 

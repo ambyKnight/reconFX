@@ -13,12 +13,18 @@ import sys
 from pathlib import Path
 
 from recon.blocking import index_ledger, measure_candidate_recall
-from recon.config import ARTIFACTS_DIR, load_fitted_config
+from recon.config import (
+    ARTIFACTS_DIR,
+    COLLISION_DEMOTE_MIN,
+    COLLISION_PROMOTE_MIN,
+    load_fitted_config,
+)
 from recon.decide import match
 from recon.evaluate import evaluate as evaluate_predictions
 from recon.explain import explain_decision
 from recon.fit import fit_collision_thresholds
 from recon.ingest import load_eval, load_train
+from recon.journal import Journal
 
 
 def cmd_fit(args):
@@ -45,8 +51,8 @@ def cmd_run(args):
 
     by_amount = index_ledger(ledger)
     fitted = load_fitted_config() or {}
-    demote_min = args.demote_min if args.demote_min is not None else fitted.get("collision_demote_min")
-    promote_min = args.promote_min if args.promote_min is not None else fitted.get("collision_promote_min")
+    demote_min = args.demote_min if args.demote_min is not None else fitted.get("collision_demote_min", COLLISION_DEMOTE_MIN)
+    promote_min = args.promote_min if args.promote_min is not None else fitted.get("collision_promote_min", COLLISION_PROMOTE_MIN)
 
     print(f"Running matcher (demote middle band: [{demote_min}, {promote_min}))...")
     pred = match(bank, by_amount, demote_min=demote_min, promote_min=promote_min)
@@ -60,11 +66,29 @@ def cmd_run(args):
     artifact_pred_path = ARTIFACTS_DIR / "predictions.csv"
     artifact_pred_path.parent.mkdir(parents=True, exist_ok=True)
     pred.to_csv(artifact_pred_path, index=False)
+
+    # Journal decisions per PIPELINE §8 & ARCHITECTURE §2.8
+    journal_path = Path(args.journal) if getattr(args, "journal", None) else (ARTIFACTS_DIR / "journal.db")
+    journal = Journal(journal_path)
+    run_id = f"eval_{manifest['config_hash']}_{manifest['timestamp'].replace(':', '-').replace('.', '-')}"
+    decisions = []
+    for r in pred.itertuples():
+        decisions.append({
+            "run_id": run_id,
+            "B_id": str(r.B_id),
+            "verdict": r.verdict,
+            "chosen_allocation": r.pred,
+            "confidence": r.confidence,
+            "reason": r.tier,
+            "config_hash": manifest["config_hash"],
+        })
+    journal.log_decisions(decisions)
+    print(f"Recorded {len(decisions)} decisions to audit journal ({journal_path})")
     return 0
 
 
 def cmd_evaluate(args):
-    """Run evaluation with candidate recall instrumentation."""
+    """Run evaluation with candidate recall instrumentation and exceptions register."""
     print("Loading evaluation data...")
     ledger, bank, truth, n_total, manifest = load_eval(data_dir=args.data_dir)
     print(f"Ingested {len(ledger)} ledger rows, {len(bank)} bank rows\n")
@@ -75,8 +99,8 @@ def cmd_evaluate(args):
     candidate_recall_stats = measure_candidate_recall(bank, by_amount, truth)
 
     fitted = load_fitted_config() or {}
-    demote_min = args.demote_min if args.demote_min is not None else fitted.get("collision_demote_min")
-    promote_min = args.promote_min if args.promote_min is not None else fitted.get("collision_promote_min")
+    demote_min = args.demote_min if args.demote_min is not None else fitted.get("collision_demote_min", COLLISION_DEMOTE_MIN)
+    promote_min = args.promote_min if args.promote_min is not None else fitted.get("collision_promote_min", COLLISION_PROMOTE_MIN)
 
     print(f"Running matcher (collision band: demote [{demote_min}, {promote_min}), promote [{promote_min}+))...\n")
     pred = match(bank, by_amount, demote_min=demote_min, promote_min=promote_min)
@@ -86,6 +110,10 @@ def cmd_evaluate(args):
         truth,
         n_total,
         candidate_recall_stats=candidate_recall_stats,
+        bank=bank,
+        by_amount=by_amount,
+        as_of_date=getattr(args, "as_of_date", None),
+        write_off_threshold=getattr(args, "write_off_threshold", None),
         print_report=True,
     )
 
@@ -139,6 +167,7 @@ def main():
     p_run.add_argument("--output", default="predictions.csv", help="Output predictions path")
     p_run.add_argument("--demote-min", type=int, default=None, help="Override demote min threshold")
     p_run.add_argument("--promote-min", type=int, default=None, help="Override promote min threshold")
+    p_run.add_argument("--journal", default=None, help="Path to SQLite journal database")
 
     # evaluate
     p_eval = subparsers.add_parser("evaluate", help="Run full evaluation and report frontier")
@@ -146,6 +175,8 @@ def main():
     p_eval.add_argument("--output", default="predictions.csv", help="Output predictions path")
     p_eval.add_argument("--demote-min", type=int, default=None, help="Override demote min threshold")
     p_eval.add_argument("--promote-min", type=int, default=None, help="Override promote min threshold")
+    p_eval.add_argument("--as-of-date", default=None, help="As-of date for suspense aging (YYYY-MM-DD)")
+    p_eval.add_argument("--write-off-threshold", type=float, default=None, help="Write-off materiality threshold")
 
     # explain
     p_explain = subparsers.add_parser("explain", help="Explain prediction for a bank line")

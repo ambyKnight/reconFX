@@ -13,6 +13,7 @@ from recon.config import (
     COLLISION_DEMOTE_MIN,
     COLLISION_PROMOTE_MIN,
     CONF_AMBIGUOUS,
+    CONF_AUTO_THRESHOLD,
     CONF_COLLISION_DEMOTED,
     CONF_DATE_WINDOW_PENALTY,
     CONF_NO_CANDIDATE,
@@ -102,8 +103,22 @@ def match(
                 conf = CONF_COLLISION_DEMOTED
                 tier = f"unique but {b.collisions} bank items share amount+date"
 
+        # Determine decision verdict per PIPELINE.md §6 & ARCHITECTURE.md §2.6
+        if conf >= CONF_AUTO_THRESHOLD and alloc is not None:
+            verdict = "AUTO"
+        elif len(pool) > 0 or alloc is not None:
+            verdict = "REVIEW"
+        else:
+            verdict = "SUSPENSE"
+
+        b_amt = getattr(b, "amt", getattr(b, "B_amount", None))
+        b_date = getattr(b, "date", getattr(b, "B_valueDate", None))
+
         out.append({
             "B_id": b.B_id,
+            "amt": b_amt,
+            "date": b_date,
+            "verdict": verdict,
             "pred": alloc,
             "confidence": round(conf, 2),
             "tier": tier,
