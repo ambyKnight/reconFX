@@ -7,6 +7,16 @@ Our matcher only ever emits a single allocation, so every list-shaped target is
 an automatic miss. This quantifies how much of the benchmark that costs us and
 whether we are at least finding one member of the right group.
 """
+import sys
+from pathlib import Path
+
+RESEARCH_DIR = Path(__file__).resolve().parent
+REPO_ROOT = RESEARCH_DIR.parent
+if str(RESEARCH_DIR) not in sys.path:
+    sys.path.insert(0, str(RESEARCH_DIR))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import pandas as pd
 from match import load, index_ledger, match
 from error_autopsy import allocation_index

@@ -13,4 +13,6 @@ venv/
 predictions.csv
 match_group_profile.csv
 kagglehub_cache/
+artifacts/
 *.parquet
+
