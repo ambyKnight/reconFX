@@ -38,6 +38,7 @@ downstream changes.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Callable, Iterable, Protocol, Sequence
@@ -453,6 +454,71 @@ def accuracy_report(run: Run, truth: dict[str, tuple[str, ...]] | None = None) -
     return "\n".join(out)
 
 
+def demo_case() -> tuple[list[Item], Callable, dict]:
+    """A four-item cascade exercising every stage and every exit.
+
+    Small and synthetic on purpose: this is a smoke test of the wiring, not a
+    measurement of anything. p3 is shaped so arithmetic genuinely cannot settle
+    it — two candidates tie the amount, so stage 3 must refuse and hand it to
+    the model rather than pick one.
+    """
+    items = [
+        Item("p1", 420_000, None, "INV88213", {"currency": "GBP"}),
+        Item("p2", 100_000, None, "ACME", {"currency": "GBP"}),
+        Item("p3", 50_000, None, "REMIT 7781", {"currency": "GBP"}),
+        Item("p4", 7_777, None, "", {"currency": "GBP"}),
+        # Two groups tie the amount and NOTHING deterministic separates them:
+        # no single line matches, and no reference token discriminates. Stage 3
+        # must refuse, so this is the only item that reaches the model.
+        Item("p5", 50_000, None, "PAYMENT", {"currency": "GBP"}),
+    ]
+    pools = {
+        "p1": [Candidate("l1", "INV_A", 420_000, None, "INV88213")],
+        "p2": [Candidate("l2", "INV_B", 60_000), Candidate("l3", "INV_C", 40_000)],
+        # Two rival groups both tie 50,000 and no single line does, so stage 2
+        # cannot claim it and stage 3 must refuse to choose. Only the memo
+        # ("REMIT 7781") separates them, which is judgement, not arithmetic —
+        # exactly the residue stage 4 exists for.
+        "p3": [Candidate("l4", "INV_D", 30_000, None, "REMIT 7781"),
+               Candidate("l5", "INV_E", 20_000, None, "REMIT 7781"),
+               Candidate("l6", "INV_F", 35_000, None, "UNRELATED"),
+               Candidate("l7", "INV_G", 15_000, None, "UNRELATED")],
+        "p4": [Candidate("l8", "INV_H", 12)],
+        "p5": [Candidate("m1", "INV_J", 30_000), Candidate("m2", "INV_K", 20_000),
+               Candidate("m3", "INV_L", 35_000), Candidate("m4", "INV_M", 15_000)],
+    }
+    truth = {"p1": ("INV_A",), "p2": ("INV_B", "INV_C"), "p3": ("INV_D", "INV_E"),
+             "p5": ("INV_J", "INV_K")}
+    return items, (lambda i: pools[i.id]), truth
+
+
+def main(live: bool = False) -> Run:
+    """Run the cascade. `--live` calls the real model for stage 4."""
+    adjudicate = None
+    if live:
+        import env
+        env.load_env()
+        env.require("TENSORMUX_API_KEY")
+        print(env.describe("TENSORMUX_API_KEY", "NEATLOGS_API_KEY"))
+
+        import neatlogs
+        tracker = neatlogs.init(api_key=os.environ.get("NEATLOGS_API_KEY", ""),
+                                tags=["reconfx", "cascade"], debug=False)
+        adjudicate = llm_adjudicator_callable(tracker)
+
+    items, candidates, truth = demo_case()
+    stages = [ExactMatchStage(), GroupAssemblyStage(), AdjudicatorStage(adjudicate)]
+    run = run_cascade(items, candidates, stages, TriageStage())
+
+    print(f"\n=== cascade ({'live model' if live else 'no model'}) ===")
+    print(accuracy_report(run, truth))
+    print("\n=== per item ===")
+    for r in sorted(run.resolutions, key=lambda r: r.item_id):
+        print(f"  {r.item_id}  {r.stage:<10} {str(r.decision):<9} "
+              f"conf={r.confidence}  {r.reason[:70]}")
+    return run
+
+
 def fit_from_run(run: Run, truth: dict[str, tuple[str, ...]]) -> Calibration:
     """Fit calibration from a labelled run, so a second pass can route on it.
 
@@ -462,3 +528,8 @@ def fit_from_run(run: Run, truth: dict[str, tuple[str, ...]]) -> Calibration:
     return Calibration.fit(
         (r.tier, tuple(sorted(r.allocations)) == tuple(sorted(truth[r.item_id])))
         for r in run.resolutions if r.item_id in truth)
+
+
+if __name__ == "__main__":
+    import sys
+    main(live="--live" in sys.argv)

@@ -166,8 +166,15 @@ Run on 2026-09-06 against the real TensorMux endpoint:
   token counts, and tags showed up in the local trace object with
   `"provider": "litellm"`, confirming LiteLLM calls to a custom `api_base` are
   traced, not just first-party provider SDKs.
-- **Not yet verified:** accuracy at scale, UNSURE/NO_MATCH behavior on
-  ambiguous or genuinely-unmatched cases, latency/cost at volume, and whether
+- **UNSURE on genuine ambiguity is now verified (2026-09-06), through the full
+  cascade rather than standalone.** Given a 500.00 payment with two valid
+  explanations (300+200 and 350+150) and a generic "PAYMENT" memo, the model
+  found *both* groupings, stated that nothing distinguished them, and returned
+  UNSURE with empty `candidate_indices` — it did not guess. The item routed to
+  the human queue, which is the correct outcome. Run it yourself with
+  `python pipeline.py --live`.
+- **Not yet verified:** accuracy at scale, NO_MATCH behaviour on genuinely
+  unmatched entries, latency/cost at volume, and whether
   Neatlogs' hosted dashboard actually ingests the data (see §6 — the test run
   had no real Neatlogs API key, so server-side delivery is untested).
 
