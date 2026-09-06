@@ -265,6 +265,31 @@ the docs site, which turned out to be unreliable (see below):
    which source it actually used; `synth.fetch_texture` does both, and marks a
    partial result `"mixed"` rather than claiming `"llm"`.
 
+5. **The model thinks, and the thinking is what costs.** Replies carry a
+   `reasoning_content` field; "reply with the single word OK" spends **141
+   completion tokens**, ~139 of them reasoning, and at `max_tokens=100` it
+   returns `finish_reason='length'` with `content=None` — a successful HTTP
+   call carrying no answer. This caused 34 of 60 real adjudications to return
+   nothing at `max_tokens=2000` (57% paid for, nothing back). Thinking can be
+   disabled with `extra_body={"chat_template_kwargs": {"enable_thinking": False}}`
+   (drops that request to 2 tokens) but we deliberately **leave it on** — stage
+   4 handles the hardest residue in the system.
+
+6. **Latency is highly variable, and removing the cap makes it worse.** With no
+   `max_tokens` at all, one call ran **362 seconds** before the endpoint
+   returned "upstream request timeout". Measured per-call times on real
+   adjudications range from **10.7s to over 70s**. Concurrency is *not* the
+   constraint — 16 concurrent trivial calls complete in 3.7s. What helps is
+   shortening the dossier: `pipeline.shortlist` caps it at 8 candidates and a
+   single call then returns in ~14s with a valid tool call. Always set
+   `timeout=` on the request; without one a stuck call holds a worker for six
+   minutes.
+
+7. **Neatlogs prints its entire payload, stack traces included, to stdout when
+   export fails** — and it fails by default with no API key. It drowned the
+   output of a batch run completely. Tracing is now opt-in (`--trace`);
+   `llm_adjudicator.adjudicate` accepts `tracker=None`.
+
 Also harmless, not a bug: LiteLLM logs repeated `"This model isn't mapped
 yet"` warnings because it doesn't have pricing data for `glm-4-7-flash` — the
 call still succeeds, but any `cost` field LiteLLM/Neatlogs reports for this

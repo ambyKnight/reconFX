@@ -244,7 +244,12 @@ class AdjudicatorStage:
 
         resolved, remaining = [], []
         for item in items:
-            pool = list(candidates(item))
+            # Shortlist HERE, not inside the model call. The reply names indices
+            # into whatever list it was shown, so the list used to build the
+            # prompt and the list used to resolve those indices must be the same
+            # object -- shortlisting in two places silently maps index 3 to two
+            # different candidates.
+            pool = shortlist(item, list(candidates(item)))
             self.attempted += 1
             try:
                 verdict = self.adjudicate(item, pool)
@@ -312,6 +317,40 @@ def build_facts(item: Item, candidate: Candidate) -> dict:
         "date_gap_days": gap,
         "shared_reference_tokens": sorted(tokens),
     }
+
+
+SHORTLIST_SIZE = 8
+
+
+def shortlist(item: Item, candidates: Sequence[Candidate],
+              k: int = SHORTLIST_SIZE) -> list[Candidate]:
+    """The k most plausible candidates, best first.
+
+    Stage 1 blocks for recall and routinely hands over 14-40 candidates. That is
+    the right size for exhaustive subset-sum, which does not care, and the wrong
+    size for a model that reasons in proportion to its input: measured, a full
+    dossier ran 362 seconds before the endpoint gave up, while the same call on
+    a short one returns in seconds.
+
+    Ranked by the signals that are cheap and already computed — amount
+    proximity first, because a fee or short payment sits close to the invoice it
+    settles; then shared reference tokens; then date. Truncating costs recall,
+    so it is a real trade and not a free optimisation: if the true counterpart
+    is ranked below k it is lost, and stage 4 cannot recover it. It is worth it
+    because the alternative measured out as a call that never returns at all.
+
+    Ordering is total and deterministic — allocation breaks remaining ties — so
+    the same dossier is produced on every run.
+    """
+    memo = _tokens_of(item.references)
+
+    def rank(c: Candidate) -> tuple:
+        return (abs(c.amount_cents - item.amount_cents),
+                -len(memo & _tokens_of(c.references)),
+                abs((c.date - item.date).days) if c.date and item.date else 9999,
+                c.allocation)
+
+    return sorted(candidates, key=rank)[:k]
 
 
 def llm_adjudicator_callable(tracker, adjudicate=None):

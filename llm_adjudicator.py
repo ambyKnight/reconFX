@@ -48,8 +48,44 @@ import os
 import litellm
 import neatlogs
 
+# LiteLLM prints a support banner on every error; at batch scale it drowns the
+# actual output and tells us nothing we do not already have from the exception.
+litellm.suppress_debug_info = True
+
+# Per-request wall clock. Without one, a single call was observed to hang for
+# 362 seconds before the endpoint returned "upstream request timeout" -- six
+# minutes of a worker slot spent on an answer that never arrives. Failing fast
+# and retrying is strictly better than waiting: the retry budget in llm_harness
+# is only useful if a stuck call ever releases.
+REQUEST_TIMEOUT = 120
+
 MODEL = "openai/glm-4-7-flash"
 API_BASE = "https://api.tensormux.com/v1"
+
+# A generous but finite ceiling. Both extremes were measured and both fail:
+#
+#   max_tokens=2000  -> ~13s per call, but truncated 34 of 60 real adjudications
+#                       (57% paid for, nothing returned)
+#   no cap at all    -> one call ran 362s before the endpoint returned
+#                       "upstream request timeout"; a worker slot spent on an
+#                       answer that never arrives
+#
+# The cause is that this model thinks before answering (the reply carries
+# `reasoning_content`; "reply with the single word OK" costs 141 completion
+# tokens) and the thinking grows with the size of the dossier. Thinking is left
+# ON deliberately -- this stage adjudicates the hardest residue in the system,
+# and trading reasoning for latency is the wrong trade -- so the dossier is
+# shortened instead (see pipeline.shortlist). Bounding the budget stops a
+# runaway; shortening the input stops the runaway happening.
+MAX_TOKENS = 8000
+
+class TruncatedVerdict(RuntimeError):
+    """The call succeeded but ran out of token budget before answering.
+
+    Its own type because it is retryable and configuration-driven, unlike a
+    model that answered and simply declined to use the tool.
+    """
+
 
 VERDICT_TOOL = {
     "type": "function",
@@ -168,13 +204,20 @@ def adjudicate(tracker, entry: dict, candidates: list[dict]) -> dict:
     # module-global of the same name -- the two never get synced. Verified by
     # reading both modules directly. Workaround: call .add_tags() on the
     # tracker INSTANCE that init() returns, which does not have this bug.
-    tracker.add_tags([f"entity_pair:{entry['entity']}"])
+    # Tracing is optional: a null tracker means "run without observability",
+    # which is what evaluation runs want. Neatlogs also prints its entire
+    # payload, stack traces included, whenever export fails -- and it fails by
+    # default without an API key -- so making it opt-in keeps a batch run
+    # readable as well as faster.
+    if tracker is not None:
+        tracker.add_tags([f"entity_pair:{entry.get('entity', '-')}"])
     response = litellm.completion(
         model=MODEL,
         api_base=API_BASE,
         api_key=os.environ["TENSORMUX_API_KEY"],
-        max_tokens=2000,
         temperature=0,
+        max_tokens=MAX_TOKENS,
+        timeout=REQUEST_TIMEOUT,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": dossier},
@@ -189,10 +232,19 @@ def adjudicate(tracker, entry: dict, candidates: list[dict]) -> dict:
         if call.function.name == "record_verdict":
             return json.loads(call.function.arguments)
 
+    # Distinguish truncation from a genuine refusal to use the tool. They need
+    # opposite responses -- one is a budget to raise, the other a prompt to fix --
+    # and lumping them together is what made a max_tokens problem look like a
+    # model quality problem for as long as it did.
+    finish = response.choices[0].finish_reason
+    used = getattr(getattr(response, "usage", None), "completion_tokens", "?")
+    if finish == "length":
+        raise TruncatedVerdict(
+            f"reply truncated after {used} completion tokens (cap {MAX_TOKENS}); "
+            f"the dossier is probably too long -- see pipeline.shortlist")
     raise RuntimeError(
-        f"model did not call record_verdict: finish_reason={response.choices[0].finish_reason!r} "
-        f"content={message.content!r}"
-    )
+        f"model did not call record_verdict: finish_reason={finish!r} "
+        f"content={message.content!r}")
 
 
 def main():
