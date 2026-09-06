@@ -3,6 +3,17 @@
 Companion to [PROJECT.md](PROJECT.md). What the system should be, why, and in
 what order to build it.
 
+> **What this document is evidence of.** The project's target is intercompany
+> reconciliation (see PROJECT.md), but every number below is measured on
+> **BenchRec**, a public bank-vs-ledger cash reconciliation dataset — the only
+> real, labelled two-sided matching data we have access to. No public
+> intercompany dataset exists (PROJECT.md explains why). Read this as evidence
+> that the *method* — collapse candidates before judging ambiguity, calibrate
+> confidence against real outcomes, treat "no match" as a first-class answer —
+> holds up on a real reconciliation problem, not as a measurement of it on
+> intercompany data. ARCHITECTURE.md is where the intercompany-specific system
+> is designed; this document is where the underlying approach is proven out.
+
 ---
 
 ## Part 1 — What the research says

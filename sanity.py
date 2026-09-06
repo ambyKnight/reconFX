@@ -1,17 +1,7 @@
-import sys
-from pathlib import Path
-
-RESEARCH_DIR = Path(__file__).resolve().parent
-REPO_ROOT = RESEARCH_DIR.parent
-if str(RESEARCH_DIR) not in sys.path:
-    sys.path.insert(0, str(RESEARCH_DIR))
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
+"""Is 'true allocation absent from ledger' real, or an artefact of my index?"""
 import pandas as pd
 from match import load, index_ledger
 from error_autopsy import allocation_index
-
 
 ledger, bank, truth, n_total = load()
 by_alloc = allocation_index(ledger)

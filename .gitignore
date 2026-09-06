@@ -12,7 +12,9 @@ venv/
 # Generated / large artifacts
 predictions.csv
 match_group_profile.csv
+error_autopsy.csv
 kagglehub_cache/
-artifacts/
 *.parquet
 
+# Saved raw HTML dumps of external pages -- dead weight, not source
+*.html
