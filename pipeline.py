@@ -223,19 +223,35 @@ class AdjudicatorStage:
     def __init__(self, adjudicate: Callable | None = None, tolerance_cents: int = 0):
         self.adjudicate = adjudicate
         self.tolerance_cents = tolerance_cents
+        # Errors are counted, not swallowed. Failing safe is right; failing
+        # *silently* is not — a stage broken in every call looks identical to a
+        # stage that considered every item and abstained, and the queue fills up
+        # either way. This shipped broken once (the dossier field mismatch) and
+        # every test passed, because they all injected a stub model.
+        self.errors: list[tuple[str, str]] = []
+        self.attempted = 0
+
+    @property
+    def healthy(self) -> bool:
+        """False when the model errored on everything it was given."""
+        return not (self.errors and len(self.errors) == self.attempted)
 
     def run(self, items, candidates):
+        self.errors, self.attempted = [], 0
         if self.adjudicate is None:
             return [], list(items)
 
         resolved, remaining = [], []
         for item in items:
             pool = list(candidates(item))
+            self.attempted += 1
             try:
                 verdict = self.adjudicate(item, pool)
-            except Exception:
+            except Exception as exc:
                 # A model failure is an abstention, never a match: a timeout or a
-                # malformed reply must not become a guess.
+                # malformed reply must not become a guess. But record it, so the
+                # difference between "abstained" and "never worked" is visible.
+                self.errors.append((item.id, f"{type(exc).__name__}: {exc}"))
                 remaining.append(item)
                 continue
 
@@ -359,6 +375,10 @@ class Run:
     resolutions: list[Resolution]
     consumed: dict[str, int]
     n_items: int
+    # Stages that errored. Empty is the normal case; a populated list means a
+    # stage was broken rather than cautious, which the decision counts alone
+    # cannot show — everything lands in REVIEW either way.
+    warnings: list[str] = field(default_factory=list)
 
     def by_decision(self) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -380,7 +400,27 @@ def run_cascade(items: Sequence[Item],
 
     consumed["unresolved"] = len(remaining)
     return Run(triage.label(resolutions) + triage.queue(remaining),
-               consumed, len(items))
+               consumed, len(items), _stage_warnings(stages))
+
+
+def _stage_warnings(stages: Sequence[Stage]) -> list[str]:
+    """Ask each stage whether it actually worked.
+
+    A stage that errors on every item still returns a clean-looking result: it
+    simply claims nothing. Without this the only symptom is a slightly longer
+    review queue, which is indistinguishable from a hard day's data.
+    """
+    warnings = []
+    for stage in stages:
+        errors = getattr(stage, "errors", [])
+        if errors:
+            first = errors[0][1]
+            warnings.append(
+                f"{stage.name}: {len(errors)} error(s) of {getattr(stage, 'attempted', '?')} "
+                f"attempted — first was {first}"
+                + ("  [STAGE IS DOWN, not abstaining]"
+                   if not getattr(stage, "healthy", True) else ""))
+    return warnings
 
 
 # --- stage 6: the accuracy list ----------------------------------------------
@@ -402,9 +442,10 @@ def accuracy_report(run: Run, truth: dict[str, tuple[str, ...]] | None = None) -
             row[2] += tuple(sorted(r.allocations)) == tuple(sorted(truth[r.item_id]))
 
     out = [f"items: {run.n_items}",
-           f"decisions: {run.by_decision()}",
-           "",
-           f"{'stage':<12} {'n':>7} {'share':>8} {'AUTO':>7} {'correct':>9}"]
+           f"decisions: {run.by_decision()}"]
+    out.extend(f"WARNING  {w}" for w in run.warnings)
+    out.extend(["",
+           f"{'stage':<12} {'n':>7} {'share':>8} {'AUTO':>7} {'correct':>9}"])
     for stage, (n, auto, correct) in sorted(rows.items(), key=lambda kv: -kv[1][0]):
         accuracy = f"{100 * correct / n:>8.1f}%" if truth is not None else "        -"
         out.append(f"{stage:<12} {n:>7} {100 * n / run.n_items:>7.1f}% "

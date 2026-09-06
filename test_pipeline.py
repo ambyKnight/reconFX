@@ -153,6 +153,65 @@ def test_no_api_key_degrades_to_the_human_queue():
     assert run.resolutions[0].decision == NO_MATCH
 
 
+def test_the_facts_we_build_are_renderable_by_the_real_dossier():
+    """Regression: the bridge to llm_adjudicator, which shipped broken.
+
+    `build_facts` emitted cash-shaped keys; `build_dossier` hardcoded
+    intercompany ones and raised KeyError on the first real call. Every other
+    test passed regardless, because they all inject a stub model — so this is
+    the one test that touches the real seam. Skipped if litellm/neatlogs are
+    absent, since the model is an optional dependency.
+    """
+    try:
+        from llm_adjudicator import build_dossier
+    except ImportError:
+        return  # optional dependency not installed
+
+    from pipeline import build_facts
+    it = item("p1", 420_000, "INV88213")
+    facts = [build_facts(it, cand("l1", "A", 420_000, "INV88213"))]
+    text = build_dossier({"amount": "4200.00", "reference": "INV88213"}, facts)
+    assert "[0]" in text and "allocation=A" in text
+
+
+def test_a_stage_that_is_down_is_reported_not_hidden():
+    """A model erroring on everything must not read as a model abstaining.
+
+    Both produce zero matches and a full review queue; only the warning tells
+    them apart, and without it a broken deployment looks like a hard week.
+    """
+    def broken(_item, _candidates):
+        raise RuntimeError("KeyError: 'entity'")
+
+    run = cascade([item("b1", 10_000), item("b2", 20_000)],
+                  pool_of(cand("l1", "A", 5)), [AdjudicatorStage(broken)])
+    assert run.warnings, "a stage that errored on every item reported nothing"
+    assert "STAGE IS DOWN" in run.warnings[0]
+    assert "WARNING" in accuracy_report(run)
+
+
+def test_an_occasional_error_is_reported_but_not_called_down():
+    calls = {"n": 0}
+
+    def flaky(_item, _candidates):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise TimeoutError("slow")
+        return {"verdict": "MATCH", "candidate_indices": [0], "confidence": 0.5,
+                "reason": "", "key_facts": []}
+
+    run = cascade([item("b1", 10_000), item("b2", 10_000)],
+                  pool_of(cand("l1", "A", 10_000)), [AdjudicatorStage(flaky)])
+    assert run.warnings and "STAGE IS DOWN" not in run.warnings[0]
+    assert run.consumed["ai"] == 1
+
+
+def test_a_healthy_run_reports_no_warnings():
+    run = cascade([item("b1", 10_000)], pool_of(cand("l1", "A", 10_000)),
+                  [ExactMatchStage()])
+    assert run.warnings == []
+
+
 # --- stage 5, gates 2 and 3: nobody scores themselves ------------------------
 
 def test_the_models_self_reported_confidence_is_never_the_number():
