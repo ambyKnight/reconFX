@@ -47,6 +47,9 @@ you measured it on.
 | [match.py](match.py) | Deterministic tiered matcher (amount+date collapse, collision handling, reference-token tie-break) | Working, evaluated on BenchRec. Collision rule now **fitted on train** rather than hand-set — see §3a. |
 | [assemble.py](assemble.py) | Stage 2 group assembly: bounded subset-sum that **counts** rival solutions instead of stopping at the first, plus reference-token corroboration as a second signal | Working, 26/26 unit tests. **Not yet exercised on real data** — see §3a. |
 | [calibrate.py](calibrate.py) | Confidence derived from measured outcomes (Wilson lower bound, cross-fitted across folds) instead of hand-typed literals | Working, unit-tested, wired into `match.py` |
+| [pipeline.py](pipeline.py) | **The cascade.** Stages 1-6: ingest -> exact arithmetic -> group assembly -> LLM -> triage -> accuracy report. Each stage consumes what it can settle and hands the rest on | Working, 20/20 tests. Dataset-agnostic; runs without an API key (model is optional) |
+| [blocking.py](blocking.py) | Stage 1 candidate generation via allocation-prefix clustering | Working. See §3a for why token/account blocking failed |
+| [test_pipeline.py](test_pipeline.py) | Cascade tests, weighted toward stage 4's gates | 20/20 passing |
 | [test_assemble.py](test_assemble.py) | Tests for both of the above, incl. regression tests for the false-uniqueness bug | 26/26 passing; runs standalone (`python test_assemble.py`) or under pytest |
 | [benchrec_probe.py](benchrec_probe.py) | Dataset/baseline exploration | Working, evidence-gathering script |
 | [rule_archaeology.py](rule_archaeology.py) | Reverse-engineers the bank's own production matching rules from train labels | Working, evidence-gathering script |
@@ -91,12 +94,48 @@ feature rather than in a policy of its own.
 `assemble.py` passes 26/26 unit tests, but run against BenchRec's 1,779 real
 list-targets it returned `ABSTAIN` on 1,777 of them (99.9%): blocking on
 account + currency + 5-day window yields candidate pools far larger than
-`MAX_POOL = 40`, so the subset-sum never runs. **This is a Stage 1 blocking
-problem, not a Stage 2 problem, and it is the next thing to fix** — until it is,
-the 5.6% group-target pool in PIPELINE.md §1.3 stays forfeited and no claim
-about group precision has any measurement behind it. Note that abstaining is the
-designed behaviour here rather than a crash; it is simply abstaining on
-everything.
+`MAX_POOL = 40`, so the subset-sum never runs. This is a Stage 1 blocking
+problem, not a Stage 2 problem — and §3b explains why it is not fixable on this
+dataset. Abstaining is the designed behaviour rather than a crash; it is simply
+abstaining on everything.
+
+**Two corrections to PIPELINE.md's own numbers**, measured on `solution.csv`:
+§Stage 2 says capping subset size at 8 "covers ~97% of observed groups" — it
+covers **87.6%**. §1.3's "~90% are ≤ 5" is actually **82.0%**. The real
+distribution: size 2 is 52.3%, size 3 is 16.0%, size 4 is 7.6%, size 5 is 6.0%.
+Don't size anything off the doc's figures.
+
+## 3b. Why stage 3 cannot be measured on BenchRec (2026-09-06)
+
+Group assembly needs a small candidate pool to search exhaustively. Three
+blocking keys were measured against the 1,779 real group targets:
+
+| blocking key | candidate recall | median pool | pools ≤ 40 |
+|---|---|---|---|
+| account + currency + ±5 days | 98.9% | 4,470 | 0.1% |
+| reference-token overlap | 0.1% | 0 | 100% |
+| allocation-prefix clusters (40 chars) | — | **4** (p90 32) | most |
+
+The first has the answer but is too big to search. The second is empty — bank
+memos and ledger references in this dataset share essentially no tokens, because
+the text is pseudonymised (`MORIBUND ROTENONES S SMILAX`). **Before reaching for
+an LLM to narrow the pool, note that the shortage is signal in the data, not
+cleverness in the matcher.**
+
+The third is the right size — and unusable, because nothing tells you *which*
+cluster a payment belongs to. That key is the remitter identity, and BenchRec has
+anonymised it away:
+
+- `B_account`: **1 distinct value** across the entire dataset
+- `B_currencyCode`, `B_transactionType`: 1 distinct value each
+- digit runs in `B_transactionReferences` appear inside the true allocation only
+  **4.8%** of the time, and are not selective when they do
+
+A real bank statement carries the remitter's account or sort code, which closes
+this immediately. **The conclusion is that stage 3 is blocked on data, not on
+code** — hence the agreed plan to generate a dataset with a remitter key rather
+than keep tuning against this one. Don't re-derive this; the probes are recorded
+in `blocking.py`'s docstring.
 
 ## 4. Model stack — read before writing any LLM code
 
@@ -225,9 +264,10 @@ running the corresponding `.py` file, don't expect them to be in the repo.
 
 From ARCHITECTURE.md §8, unchanged by anything above:
 
-0. **Narrow Stage 1 blocking so group assembly can actually run** — currently
-   99.9% ABSTAIN on real data (§3a). Everything about group targets is blocked
-   behind this, and it is now the highest-value open item.
+0. **A real (or synthetic) dataset with a remitter key** — see §3b. Stage 3 is
+   built and unit-tested but cannot be *measured* on BenchRec, because the field
+   that says which customer paid has been anonymised to a single constant.
+   Generating our own dataset is the agreed path.
 1. Mutual exclusivity + the pass loop (no model needed)
 2. ~~Fix the collision-rule bug in `match.py`~~ — **done**, fitted on train, 76.2%
    at 99.89% (§3a)
