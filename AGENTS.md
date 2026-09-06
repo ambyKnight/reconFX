@@ -48,6 +48,10 @@ you measured it on.
 | [assemble.py](assemble.py) | Stage 2 group assembly: bounded subset-sum that **counts** rival solutions instead of stopping at the first, plus reference-token corroboration as a second signal | Working, 26/26 unit tests. **Not yet exercised on real data** — see §3a. |
 | [calibrate.py](calibrate.py) | Confidence derived from measured outcomes (Wilson lower bound, cross-fitted across folds) instead of hand-typed literals | Working, unit-tested, wired into `match.py` |
 | [pipeline.py](pipeline.py) | **The cascade.** Stages 1-6: ingest -> exact arithmetic -> group assembly -> LLM -> triage -> accuracy report. Each stage consumes what it can settle and hands the rest on | Working, 20/20 tests. Dataset-agnostic; runs without an API key (model is optional) |
+| [synth.py](synth.py) | **Synthetic dataset harness.** Model writes the texture (names, reference formats, memo phrasing); Python writes every amount, date and truth row | Working, 23/23 tests. `python synth.py --n 200 --live` |
+| [synth_schema.py](synth_schema.py) | The dataset contract: JSON Schema + an arithmetic **oracle** that re-derives every truth claim before a file is written | Working |
+| [adapters.py](adapters.py) | Turns a dataset into the cascade's `Item`/`Candidate`, blocking on **remitter account** | Working. Closes the stage 1 gap |
+| [env.py](env.py) | Loads `.env` into the environment; never logs a value | Working |
 | [blocking.py](blocking.py) | Stage 1 candidate generation via allocation-prefix clustering | Working. See §3a for why token/account blocking failed |
 | [test_pipeline.py](test_pipeline.py) | Cascade tests, weighted toward stage 4's gates | 20/20 passing |
 | [test_assemble.py](test_assemble.py) | Tests for both of the above, incl. regression tests for the false-uniqueness bug | 26/26 passing; runs standalone (`python test_assemble.py`) or under pytest |
@@ -137,6 +141,49 @@ code** — hence the agreed plan to generate a dataset with a remitter key rathe
 than keep tuning against this one. Don't re-derive this; the probes are recorded
 in `blocking.py`'s docstring.
 
+## 3c. Synthetic dataset — first end-to-end measurement (2026-09-06)
+
+`synth.py` generates data with the field BenchRec lacks. The effect is immediate:
+
+| | BenchRec | synthetic |
+|---|---|---|
+| candidate pool per payment (median) | 4,470 | **15–37** |
+| group assembly outcome | ABSTAIN on 99.9% | runs normally |
+
+**Design rule: the model never touches the answer key.** It writes company
+names, reference formats and memo phrasing. Python writes every amount, date and
+truth row, so the dataset is reproducible from `meta.seed` alone and
+`synth_schema.validate` re-derives every arithmetic claim before a file is
+written. The literature on LLM-generated ground truth is consistent that labels
+need a formal oracle; this is that oracle.
+
+Fitted on seed 7 (n=9,000, 400 customers), applied to held-out seed 99:
+
+| tier | n | observed | Wilson lower |
+|---|---|---|---|
+| `exact/UNIQUE/size1` | 2,138 | 99.39% | 98.96% |
+| `group/UNIQUE/size2` | 520 | **100.00%** | 99.27% |
+| `group/CORROBORATED/size2` | 371 | 100.00% | 98.98% |
+| `group/UNIQUE/size3` | 102 | 98.04% | 93.13% |
+| `group/CORROBORATED/size4+/truncated` | 17 | **88.24%** | 65.66% |
+
+Three things worth keeping:
+
+1. **Uniqueness at size 2 is genuinely strong** (520 observations, zero errors),
+   and degrades with group size (98.0% at size 3, ~97% at size 4). The signal is
+   real but it is not size-invariant.
+2. **Truncated searches are measurably worse** (88.24% vs 100%). Giving them
+   their own calibration bucket was not fastidiousness — pooled with completed
+   searches they would have been invisible.
+3. **At the 99.8% bar, nothing earns AUTO.** Everything routes to review. At a
+   99% bar, 12.6% of items auto-post — but measured precision on held-out data
+   was **98.68%**, i.e. the bound did *not* hold out of sample. The Wilson bound
+   is per-tier and one-sided at 95%, so pooling several tiers that each sit just
+   above the bar can land below it. **This is the argument for PIPELINE.md
+   §Stage 6's conformal/selective-risk threshold**, which bounds risk over the
+   accepted *set* rather than per bucket. Do not raise the bar to make this go
+   away; fix the threshold.
+
 ## 4. Model stack — read before writing any LLM code
 
 **We do not use Anthropic/Claude for the reconciliation LLM loop.** This was an
@@ -208,6 +255,15 @@ the docs site, which turned out to be unreliable (see below):
    test — but that test ran with an empty `NEATLOGS_API_KEY` (none was
    available). Re-test with a real key before concluding anything is actually
    broken server-side; this may simply be what an invalid/missing key does.
+
+4. **`glm-4-7-flash`'s structured output is flaky, and fails silently.** Three
+   identical texture calls returned 8, then 0, then 7 usable entries. The zero
+   was a well-formed `tool_calls` block whose *contents* failed validation — so
+   nothing raised, and an earlier `synth.py` treated one bad draw as "no model
+   available", producing a fixture-only dataset while reporting success. Any
+   code calling this model for structured output must retry and must report
+   which source it actually used; `synth.fetch_texture` does both, and marks a
+   partial result `"mixed"` rather than claiming `"llm"`.
 
 Also harmless, not a bug: LiteLLM logs repeated `"This model isn't mapped
 yet"` warnings because it doesn't have pricing data for `glm-4-7-flash` — the
