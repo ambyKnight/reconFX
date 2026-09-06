@@ -1,0 +1,37 @@
+B_id,bank_amt,bank_date,pool_size,pool_allocs,true_in_pool,true_exists,true_n_rows,true_sum,true_ties_amt,true_date_gap,pred_n_rows,pred_ties_amt,collisions,tier,verdict
+469583337058,-34106.02,2023-03-16,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+205703444224,2309732.6,2023-05-12,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+846822415492,-922000000.0,2023-04-06,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+665894245888,28.04,2023-05-17,1,1,False,True,3,236051.82,False,0.0,2,False,1,single allocation,B. true allocation exists but amount does not tie
+820400152243,-21046201.63,2023-05-11,2,1,False,False,0,,False,,6,False,1,single allocation,A. true allocation absent from ledger entirely
+450146306328,2592020.53,2023-05-11,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+40032296480,646044.85,2023-03-25,1,1,False,False,0,,False,,3,True,1,single allocation,A. true allocation absent from ledger entirely
+431963372992,-45.78,2023-04-29,1,1,False,True,1,-25725.67,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+999257948517,162029.2,2023-04-02,1,1,False,True,1,428182.0,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+787255452668,2270997.4,2023-05-03,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+49888021839,-20000000.0,2023-05-12,1,1,False,True,8,-522020618.33,False,0.0,1,True,2,single allocation,B. true allocation exists but amount does not tie
+833954720543,2270997.4,2023-05-03,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+950796679238,46.0,2023-04-28,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+603755345326,-221206.4,2023-04-12,1,1,False,True,1,-285359.0,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+870672151605,17249181.48,2023-04-28,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+204703271216,-56596347.8,2023-05-11,2,1,False,False,0,,False,,6,False,1,single allocation,A. true allocation absent from ledger entirely
+415214314497,248578.0,2023-02-25,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+843475395797,17249181.48,2023-04-28,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+984207686439,344486.59,2023-05-05,1,1,False,True,2,0.0,False,1.0,2,False,1,single allocation,B. true allocation exists but amount does not tie
+887305818482,-76000.0,2023-04-01,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+831882117196,-29444.12,2023-04-28,1,1,False,True,1,-29444.12,True,1.0,1,True,2,single allocation,C. amount ties but fell outside the date window
+344940641847,-6479600.0,2023-03-22,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+262024330567,-6538537.0,2023-05-25,2,1,False,False,0,,False,,3,True,1,single allocation,A. true allocation absent from ledger entirely
+716179967688,-26.85,2023-05-12,1,1,False,True,1,-5964.24,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+889138307403,28.0,2023-04-05,1,1,False,True,1,626880.84,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+44583349019,21838801.28,2023-04-12,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+859643621483,-998.8,2023-04-06,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+268953844810,-900.8,2023-03-24,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+619103316115,-12280.44,2023-04-28,1,1,False,True,1,-12280.44,True,1.0,1,True,2,single allocation,C. amount ties but fell outside the date window
+712801003448,7482392.78,2023-05-03,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+634202613371,-63296.0,2023-04-13,1,1,False,False,0,,False,,1,True,2,single allocation,A. true allocation absent from ledger entirely
+646185609054,46.0,2023-04-27,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+352812889025,-85025.0,2023-04-14,1,1,False,True,1,-18197.13,False,0.0,1,True,1,single allocation,B. true allocation exists but amount does not tie
+842883042449,-92178.0,2023-04-26,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+821419845828,34.4,2023-05-18,1,1,False,False,0,,False,,1,True,1,single allocation,A. true allocation absent from ledger entirely
+243335667341,-318161.0,2023-05-07,1,1,False,True,2,0.0,False,3.0,1,True,1,single allocation,B. true allocation exists but amount does not tie

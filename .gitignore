@@ -1,0 +1,16 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated / large artifacts
+predictions.csv
+match_group_profile.csv
+kagglehub_cache/
+*.parquet

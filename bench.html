@@ -1,0 +1,191 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>BenchRec: A Real-World Cash Reconciliation Dataset | Kaggle</title>
+  <meta charset="utf-8" />
+    <meta name="robots" content="index, follow" />
+  <meta name="description" content="Benchmark data for record linkage in financial systems" />
+    <meta name="keywords" content="classification,tabular,finance,english,multiclass classification" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0">
+  <meta name="theme-color" content="#008ABC" />
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" type="text/javascript">
+    window["pageRequestStartTime"] = 1788474468650;
+    window["pageRequestEndTime"] = 1788474468658;
+    window["initialPageLoadStartTime"] = new Date().getTime();
+  </script>
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" id="gsi-client" src="https://accounts.google.com/gsi/client" async defer></script>
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==">window.KAGGLE_JUPYTERLAB_PATH = "/static/assets/jupyterlab-v4/jupyterlab-index-4657f3c25218465e.html";</script>
+  <link rel="preconnect" href="https://www.google-analytics.com" crossorigin="anonymous" /><link rel="preconnect" href="https://stats.g.doubleclick.net" /><link rel="preconnect" href="https://storage.googleapis.com" /><link rel="preconnect" href="https://apis.google.com" />
+    <link href="/static/images/favicon.ico" rel="shortcut icon" type="image/x-icon" id="dynamic-favicon" />
+  <link rel="manifest" href="/static/json/manifest.json" crossorigin="use-credentials">
+
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i&display=swap"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL,wght@0..1,300..700&display=block"
+    rel="preload" as="style" />
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,400i,500,500i,600,600i,700,700i&display=swap"
+    rel="stylesheet" media="print" id="async-google-font-1" />
+  <link href="https://fonts.googleapis.com/css2?family=Google+Symbols:FILL,wght@0..1,300..700&display=block"
+    rel="stylesheet" media="print" id="async-google-font-2" />
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" type="text/javascript">
+    const styleSheetIds = ["async-google-font-1", "async-google-font-2"];
+    styleSheetIds.forEach(function (id) {
+      document.getElementById(id).addEventListener("load", function() {
+        this.media = "all";
+      });
+    });
+  </script>
+
+
+    <link rel="canonical" href="https://www.kaggle.com/datasets/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset" />
+    <link rel="stylesheet" type="text/css" href="/static/assets/app.css?v=cee4fdab64ac46b7" />
+
+  
+    
+ 
+      <script nonce="TQ7R6SCYciWojr1uBwDbyg==">
+        try{(function(a,s,y,n,c,h,i,d,e){d=s.createElement("style");
+        d.appendChild(s.createTextNode(""));s.head.appendChild(d);d=d.sheet;
+        y=y.map(x => d.insertRule(x + "{ opacity: 0 !important }"));
+        h.start=1*new Date;h.end=i=function(){y.forEach(x => x<d.cssRules.length ? d.deleteRule(x) : {})};
+        (a[n]=a[n]||[]).hide=h;setTimeout(function(){i();h.end=null},c);h.timeout=c;
+        })(window,document,['.site-header-react__nav'],'dataLayer',2000,{'GTM-52LNT9S':true});}catch(ex){}
+    </script>
+    <script nonce="TQ7R6SCYciWojr1uBwDbyg==">
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-T7QHS60L4Q', {
+            'optimize_id': 'GTM-52LNT9S',
+            'displayFeaturesTask': null,
+            'send_page_view': false,
+            'content_group1': 'Datasets',
+            'user_properties': {
+                'logged_in': false,
+            }
+        });
+    </script>
+    <script nonce="TQ7R6SCYciWojr1uBwDbyg==" async src="https://www.googletagmanager.com/gtag/js?id=G-T7QHS60L4Q"></script>
+
+
+  
+    
+    <meta property="og:url" content="https://www.kaggle.com/datasets/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset" />
+    <meta property="og:title" content="BenchRec: A Real-World Cash Reconciliation Dataset" />
+    <meta property="og:description" content="Benchmark data for record linkage in financial systems" />
+    <meta property="og:type" content="website" />
+    <meta property="fb:app_id" content="2665027677054710" />
+
+        <meta property="og:image" content="https://storage.googleapis.com/kaggle-datasets-images/9502956/14856348/5141c249e6680ba4b8cf878c8c6ef1ae/dataset-card.png?t=2026-02-16-10-13-14" />
+        <meta property="twitter:image" content="https://storage.googleapis.com/kaggle-datasets-images/9502956/14856348/5141c249e6680ba4b8cf878c8c6ef1ae/dataset-card.png?t=2026-02-16-10-13-14" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@kaggledatasets" />
+
+
+
+
+  <meta name="twitter:site" content="@Kaggle" /> 
+  
+    
+    <script nonce="TQ7R6SCYciWojr1uBwDbyg==" type="application/ld+json">{"@context":"http://schema.org/","@type":"Dataset","name":"BenchRec: A Real-World Cash Reconciliation Dataset","description":"BenchRec: Tier 1 Bank Cash Reconciliation Dataset (Transaction Matching)\n\nMatching financial transactions is one of the most time-consuming back-office tasks in financial services.\nThis dataset represents a real-world cash reconciliation problem where bank statement transactions must be matched to internal ledger transactions — a core workflow in banking, asset management, payments, and operations teams.\nRules-based systems struggle with noisy data and edge cases, leaving large volumes for manual review. This dataset is designed to support machine learning–based transaction matching that improves straight-through processing (STP) while controlling false matches.\n\nOriginally released as part of the ICAIF 2023 Benchmark Competition\nhttps://ai-finance.org/icaif-23/\n\n🎯 Task Definition (What you are predicting)\nGiven a transaction of type B (external statement entry), predict the key characteristics of the transaction(s) of type A (internal ledger entries) that it should match to.\nInstead of predicting specific transaction IDs, the model predicts a business-meaningful allocation key:\nA_allocation = currency + account + transaction attributes\nThis reflects how reconciliation is validated operationally: a match is considered correct if the predicted allocation corresponds to the correct financial characteristics, even if the internal transaction IDs differ.\n---\n\n🧠 Matching Rules &amp; Ground Truth\n\n- Not all B-transactions have a valid match → targetAllocation may be blank\n- One-to-many and many-to-one matches are possible\n- Each A-transaction and B-transaction can belong to only one match\n- A prediction is considered correct if the predicted allocation set is:\n\t- equal to, or\n\t- a subset of the true allocation set\nThis mirrors real reconciliation workflows where as long as the predicted allocation is more specific than the actual set of allocations, then that prediction can be considered as correct.\n\n\n📊 Evaluation Metrics (What “good” looks like)\n\n\nIn production,  erroneous matches are costly. It is better to leave a transaction unmatched (and leave it for manual review) than to match it incorrectly.  The required precision for fully automated matches it 99.9%. However for this dataset this required precision has been reduced to 99.8% in order to account for labels errors which were identified at a rate of 0.2%.\nThe match rate should be optimized subject to the match precision meeting the required level.\nYou should meet the threshold for match precision. (\n- Match Rate\n  Fraction of true matches your model successfully identifies.\n- Match  Precision\n  Fraction of your predicted matches that are correct.\n\n🧪 Suggested Baselines &amp; Experiments\n\nThis dataset supports experimentation with:\n- Rules engines vs ML matchers\n- Fellegi-Sunter matching\n- Confidence-scored predictions\n- Explainable matching (audit-ready reasoning)\n---\n\n📁 What’s in the Dataset\n\n- Real-world transaction pairs\n- Ground-truth allocation targets (targetAllocation)\n- Fields enabling amount, date, currency, and account-based matching\n- Support for partial, grouped, and null matches\n---\n\n💡 Bonus (Optional Outputs)\n\nModels may optionally provide:\n- A human-readable explanation of why a match was made (important for audit/compliance)\n- A confidence score per match\n","url":"https://www.kaggle.com/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset","version":3,"keywords":["task, classification","data type, tabular","subject, people and society, business, finance","language, english","task, multiclass classification"],"license":{"@type":"CreativeWork","name":"Attribution 4.0 International (CC BY 4.0)","url":"https://creativecommons.org/licenses/by/4.0/"},"identifier":["9502956"],"includedInDataCatalog":{"@type":"DataCatalog","name":"Kaggle","url":"https://www.kaggle.com"},"creator":{"@type":"Person","name":"BenchRec","url":"https://www.kaggle.com/benchmarkteam","image":"https://storage.googleapis.com/kaggle-avatars/thumbnails/32388850-kg.jpeg?t=2026-02-15-11-20-34"},"distribution":[{"@type":"DataDownload","requiresSubscription":true,"encodingFormat":"zip","fileFormat":"zip","contentUrl":"https://www.kaggle.com/datasets/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset/download?datasetVersionNumber=3","contentSize":"15583204 bytes"}],"commentCount":0,"dateModified":"2026-02-22T10:59:51.36Z","discussionUrl":"https://www.kaggle.com/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset/discussion","alternateName":"Benchmark data for record linkage in financial systems","isAccessibleForFree":true,"thumbnailUrl":"https://storage.googleapis.com/kaggle-datasets-images/9502956/14856348/5141c249e6680ba4b8cf878c8c6ef1ae/dataset-card.png?t=2026-02-16-10-13-14","interactionStatistic":[{"@type":"InteractionCounter","interactionType":"http://schema.org/CommentAction","userInteractionCount":0},{"@type":"InteractionCounter","interactionType":"http://schema.org/DownloadAction","userInteractionCount":282},{"@type":"InteractionCounter","interactionType":"http://schema.org/ViewAction","userInteractionCount":1257},{"@type":"InteractionCounter","interactionType":"http://schema.org/LikeAction","userInteractionCount":1}]}</script>
+
+
+  
+    
+
+  
+    
+
+
+
+    <script nonce="TQ7R6SCYciWojr1uBwDbyg==">window['useKaggleAnalytics'] = true;</script>
+
+  <script id="gapi-target" nonce="TQ7R6SCYciWojr1uBwDbyg==" src="https://apis.google.com/js/api.js" defer
+    async></script>
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" src="/static/assets/runtime.js?v=c31d185351fff14a"></script>
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" src="/static/assets/vendor.js?v=464203c1a602d610"></script>
+  <script nonce="TQ7R6SCYciWojr1uBwDbyg==" src="/static/assets/app.js?v=dd7db461a1f61649"></script>
+    <script nonce="TQ7R6SCYciWojr1uBwDbyg==" type="text/javascript">
+      window.kaggleStackdriverConfig = {
+        key: 'AIzaSyA4eNqUdRRskJsCZWVz-qL655Xa5JEMreE',
+        projectId: 'kaggle-161607',
+        service: 'web-fe',
+        version: 'ci',
+        userId: '0'
+      }
+    </script>
+</head>
+<body>
+  <div id="root">
+    
+
+
+
+
+
+
+
+
+<script nonce="TQ7R6SCYciWojr1uBwDbyg==" type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+    jax: ['input/TeX', 'output/SVG'],
+    "HTML-CSS": {
+    preferredFont: "TeX",
+    availableFonts: ["STIX", "TeX"],
+    linebreaks: {
+    automatic: true
+    },
+    EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50)
+    },
+    tex2jax: {
+    inlineMath: [["\\(", "\\)"], ["\\\\(", "\\\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    ignoreClass: "tex2jax_ignore|dno"
+    },
+    TeX: {
+    noUndefined: {
+    attributes: {
+    mathcolor: "red",
+    mathbackground: "#FFEEEE",
+    mathsize: "90%"
+    }
+    }
+    },
+    Macros: {
+    href: "{}"
+    },
+    skipStartupTypeset: true,
+    messageStyle: "none",
+    extensions: ["Safe.js"],
+    });
+</script>
+<script type="text/javascript" nonce="TQ7R6SCYciWojr1uBwDbyg==">
+  window.addEventListener("DOMContentLoaded", () => {
+    const head = document.getElementsByTagName("head")[0];
+    const lib = document.createElement("script");
+    lib.type = "text/javascript";
+    // Always use the production asset in local dev, which is served from GCS. We tried to proxy and / or serve this
+    // in a better way in localhost, but it didn't work out. See b/328073416#comment8 for details.
+    const forceProdHost = window.location.hostname === "localhost";
+    lib.src = `${forceProdHost ? "https://www.kaggle.com" : ""}/static/mathjax/2.7.9/MathJax.js?config=TeX-AMS_SVG`;
+    head.appendChild(lib);
+  });
+</script>
+
+
+
+
+
+
+
+
+  </div>
+</body>
+</html>
